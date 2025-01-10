@@ -346,7 +346,7 @@ const createTaskDefinition = async (
         memory: 2048, // Container-specific memory allocation
         portMappings: [
           {
-            containerPort: 80, // Port inside the container
+            containerPort: 3000, // Port inside the container
             hostPort: 80, // Port on the host
             protocol: TransportProtocol.TCP, // Protocol (tcp or udp)
           },

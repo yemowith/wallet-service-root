@@ -1,5 +1,5 @@
 import { ListClustersCommand } from '@aws-sdk/client-ecs'
-import aws from '../../providers/ecsclient'
+import aws from '../../providers/awsProvider'
 
 const resetAll = async () => {
   let clusters = await aws.getClusters()

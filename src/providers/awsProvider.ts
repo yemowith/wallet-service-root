@@ -1,4 +1,9 @@
-import { AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY } from '../config'
+import {
+  AWS_REGION,
+  AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY,
+  AWS_ACCOUNT_ID,
+} from '../config'
 import {
   CreateClusterCommand,
   DeleteClusterCommand,
@@ -22,29 +27,13 @@ import {
   DescribeSubnetsCommand,
   EC2Client,
 } from '@aws-sdk/client-ec2'
-
+import { ecsClient, ec2Client } from '../clients/aws'
 const VPC_ID: any = null
-
-const client = new ECSClient({
-  region: AWS_REGION,
-  credentials: {
-    accessKeyId: AWS_ACCESS_KEY_ID as string, // Replace with your access key ID
-    secretAccessKey: AWS_SECRET_ACCESS_KEY as string, // Replace with your secret access key
-  },
-})
-
-const ec2Client = new EC2Client({
-  region: AWS_REGION,
-  credentials: {
-    accessKeyId: AWS_ACCESS_KEY_ID as string, // Replace with your access key ID
-    secretAccessKey: AWS_SECRET_ACCESS_KEY as string, // Replace with your secret access key
-  },
-})
 
 const getClusters = async () => {
   try {
     const command = new ListClustersCommand({})
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
     return response
   } catch (error) {
     console.error('Invalid credentials or insufficient permissions:', error)
@@ -54,7 +43,7 @@ const getClusters = async () => {
 const listTaskDefinitions = async () => {
   try {
     const command = new ListTaskDefinitionsCommand({})
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
     return response
   } catch (error) {
     console.error('Error listing task definitions:', error)
@@ -64,7 +53,7 @@ const listTaskDefinitions = async () => {
 const listContainerInstances = async (clusterName: string) => {
   try {
     const command = new ListContainerInstancesCommand({ cluster: clusterName })
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
     return response
   } catch (error) {
     console.error('Error listing container instances:', error)
@@ -140,7 +129,7 @@ const getSecurityGroups = async () => {
 const getContainerNameFromTaskDefinition = async (taskDefinition: string) => {
   try {
     const command = new DescribeTaskDefinitionCommand({ taskDefinition })
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
 
     if (response.taskDefinition?.containerDefinitions?.length) {
       const containerName = response.taskDefinition.containerDefinitions[0].name // Get the first container name
@@ -206,7 +195,7 @@ const runNewTask = async (
   try {
     // @ts-ignore
     const command = new RunTaskCommand(params)
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
     console.log('Task started successfully:', response.tasks)
     return response
   } catch (error) {
@@ -220,7 +209,7 @@ const listClusterTasks = async (clusterName: string) => {
       cluster: clusterName,
     })
 
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
     return response.taskArns || []
   } catch (error) {
     console.error('Error listing tasks:', error)
@@ -236,7 +225,7 @@ const stopTask = async (clusterName: string, taskArn: string) => {
       reason: 'Task manually stopped', // Durdurma sebebini belirtin (opsiyonel)
     })
 
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
     console.log('Task stopped successfully:', response.task)
   } catch (error) {
     console.error('Error stopping task:', error)
@@ -279,7 +268,7 @@ const createCluster = async (
     }
 
     const command = new CreateClusterCommand(params)
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
 
     console.log('Cluster created successfully:', response.cluster?.clusterArn)
     return response.cluster
@@ -301,7 +290,7 @@ const deleteCluster = async (clusterName: string) => {
       cluster: clusterName,
     })
 
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
     console.log('Cluster deleted successfully:', response.cluster?.clusterArn)
 
     return response.cluster
@@ -330,7 +319,7 @@ const createTaskDefinition = async (
   environment?: { name: string; value: string }[],
 ) => {
   const awsRegion = AWS_REGION || 'default-region'
-  const executionRoleArn = 'arn:aws:iam::913524904473:role/ecsTaskExecutionRole' // Replace with your execution role ARN
+  const executionRoleArn = `arn:aws:iam::${AWS_ACCOUNT_ID}:role/ecsTaskExecutionRole` // Replace with your execution role ARN
   const params = {
     family: family, // Name of your task family
     networkMode: NetworkMode.AWSVPC, // Network mode: 'bridge', 'host', 'awsvpc', or 'none'
@@ -367,7 +356,7 @@ const createTaskDefinition = async (
     // Ensure awslogs-region is a string
 
     const command = new RegisterTaskDefinitionCommand(params)
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
 
     console.log(
       'Task Definition created successfully:',
@@ -386,7 +375,7 @@ const deleteTaskDefinition = async (taskDefinitionArn: string) => {
       taskDefinition: taskDefinitionArn, // The ARN of the task definition to deregister
     })
 
-    const response = await client.send(command)
+    const response = await ecsClient.send(command)
 
     console.log(
       'Task Definition deregistered successfully:',
@@ -400,7 +389,6 @@ const deleteTaskDefinition = async (taskDefinitionArn: string) => {
 }
 
 const aws = {
-  client,
   getClusters,
   listTaskDefinitions,
   listContainerInstances,

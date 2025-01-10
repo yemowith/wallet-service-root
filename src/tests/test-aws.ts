@@ -1,5 +1,5 @@
 import { ListClustersCommand } from '@aws-sdk/client-ecs'
-import aws from '../providers/ecsclient'
+import aws from '../providers/awsProvider'
 import createTask from '../tasks/aws/createTask'
 import resetAll from '../tasks/aws/resetAll'
 ;(async () => {

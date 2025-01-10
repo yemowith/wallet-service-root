@@ -12,10 +12,11 @@
   "dependencies": {
     "@aws-sdk/client-ec2": "^3.723.0",
     "@aws-sdk/client-ecs": "^3.723.0",
-    "@aws-sdk/types": "^3.723.0",
+    "@aws-sdk/client-sqs": "^3.726.0",
     "express": "^4.21.2"
   },
   "devDependencies": {
+    "@aws-sdk/types": "^3.723.0",
     "@types/dotenv": "^8.2.0",
     "@types/express": "^5.0.0",
     "@types/node": "^20.4.2",

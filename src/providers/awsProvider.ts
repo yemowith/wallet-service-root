@@ -27,7 +27,7 @@ import {
   DescribeSubnetsCommand,
   EC2Client,
 } from '@aws-sdk/client-ec2'
-import { ecsClient, ec2Client } from '../clients/aws'
+import { ecsClient, ec2Client } from '../core/clients/aws'
 const VPC_ID: any = null
 
 const getClusters = async () => {
@@ -326,7 +326,7 @@ const createTaskDefinition = async (
     requiresCompatibilities: [Compatibility.FARGATE], // Launch type compatibility
     executionRoleArn: executionRoleArn,
     cpu: '1024', // Task-level CPU (e.g., 256, 512, 1024 for Fargate)
-    memory: '2048', // Task-level memory (e.g., 512, 1024 for Fargate)
+    memory: '1024', // Task-level memory (e.g., 512, 1024 for Fargate)
     containerDefinitions: [
       {
         name: container, // Name of the container

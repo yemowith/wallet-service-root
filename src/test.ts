@@ -1,25 +1,18 @@
-import { ListClustersCommand } from '@aws-sdk/client-ecs'
-import aws from './providers/awsProvider'
-import createTask from './tasks/aws/createTask'
-import resetAll from './tasks/aws/resetAll'
+import pgClient from './core/clients/db-pg'
+import redisProvider from './providers/redisProvider'
+import createContainer from './tasks/container/createContainer'
 ;(async () => {
-  let containerUrl =
-    '913524904473.dkr.ecr.eu-north-1.amazonaws.com/wallet-container-service:latest'
-  let clusterName = 'wallet-container-cluster'
-  let taskDefinitionName = 'wallet-container-task'
-  let containerName = 'wallet-container'
-  let tagName = 'wallet-container'
+  await pgClient.connect()
+  //await createContainer()
 
-  let environment = [{ name: 'CONTAINER_ID', value: '1' }]
+  let container = await redisProvider
+    .container()
+    .register('1', '1234567890', 'test')
 
-  await createTask(
-    containerUrl,
-    clusterName,
-    taskDefinitionName,
-    containerName,
-    tagName,
-    environment,
-  )
+  console.log(container.getId())
+
+  let container2 = await redisProvider.container().get('1')
+  console.log(container2?.getId())
 })()
 
 //runTask();

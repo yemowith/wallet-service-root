@@ -10,3 +10,10 @@ export const AWS_ACCOUNT_ID = process.env.AWS_ACCOUNT_ID
 export const AWS_REGION = process.env.AWS_REGION
 export const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID
 export const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY
+
+export const PG_HOST = process.env.PG_HOST
+export const PG_PORT = process.env.PG_PORT
+export const PG_USER = process.env.PG_USER
+export const PG_PASSWORD = process.env.PG_PASSWORD
+
+export const ENABLE_LOGGING = process.env.ENABLE_LOGGING === 'true'

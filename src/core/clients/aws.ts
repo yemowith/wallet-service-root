@@ -4,7 +4,7 @@ import {
   AWS_REGION,
   AWS_SECRET_ACCESS_KEY,
   AWS_ACCOUNT_ID,
-} from '../config'
+} from '../../config'
 import { EC2Client } from '@aws-sdk/client-ec2'
 import { SQSClient } from '@aws-sdk/client-sqs'
 

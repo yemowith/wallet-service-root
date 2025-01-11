@@ -17,3 +17,6 @@ export const PG_USER = process.env.PG_USER
 export const PG_PASSWORD = process.env.PG_PASSWORD
 
 export const ENABLE_LOGGING = process.env.ENABLE_LOGGING === 'true'
+
+export const CONTAINER_SERVICE_URL =
+  '913524904473.dkr.ecr.eu-north-1.amazonaws.com/wallet-container-service:latest'

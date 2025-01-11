@@ -2,6 +2,7 @@ import pgClient from '../core/clients/db-pg'
 import fs from 'fs/promises'
 import { Client } from 'pg'
 import { PG_HOST, PG_PASSWORD, PG_PORT, PG_USER } from '../config'
+import cacheProvider from './cacheProvider'
 
 const dbPgProvider = {
   createDatabase: async (databaseName: string) => {
@@ -69,7 +70,7 @@ const dbPgProvider = {
     } finally {
     }
   },
-  deleteDatabasesWithPrefix: async (prefix: string, force: boolean = false) => {
+  deleteDatabasesWithPrefix: async (prefix: string, force: boolean = true) => {
     try {
       const result = await pgClient.query(
         'SELECT datname FROM pg_database WHERE datistemplate = false',
@@ -102,6 +103,69 @@ const dbPgProvider = {
       console.error('Error deleting databases with prefix:', error)
     } finally {
       await pgClient.end()
+    }
+  },
+
+  getByDBPrefix: async (prefix: string = 'c_') => {
+    // Get all databases with the given prefix
+    const result = await pgClient.query(
+      'SELECT datname FROM pg_database WHERE datistemplate = false',
+    )
+
+    const databasesToCheck = result.rows
+      .map((row) => row.datname)
+      .filter((name) => name.startsWith(prefix))
+
+    console.log(`Databases matching prefix "${prefix}":`, databasesToCheck)
+
+    return databasesToCheck
+  },
+  getWalletETHCount: async (prefix: string = 'c_') => {
+    let dbs = await dbPgProvider.getByDBPrefix(prefix)
+    let result: any = {
+      total: 0,
+      db: [],
+    }
+
+    if (dbs.length === 0) {
+      return result
+    } else {
+      for (const db of dbs) {
+        let cache = await cacheProvider.get(`${db}-walletCount`)
+        if (cache) {
+          result.total += parseInt(cache as string)
+          result.db.push({
+            dbName: db,
+            count: cache,
+          })
+          continue
+        }
+
+        let customPgClient = new Client({
+          host: PG_HOST,
+          user: PG_USER,
+          password: PG_PASSWORD,
+          port: Number(PG_PORT),
+          database: db,
+        })
+        await customPgClient.connect()
+
+        const sqlResult = await customPgClient.query(
+          `SELECT COUNT(*) FROM "WalletETH"`,
+        )
+        result.total += parseInt(sqlResult.rows[0].count)
+        result.db.push({
+          dbName: db,
+          count: sqlResult.rows[0].count,
+        })
+        await cacheProvider.set(
+          `${db}-walletCount`,
+          sqlResult.rows[0].count,
+          10000,
+        )
+        await customPgClient.end()
+      }
+      return result
     }
   },
 }

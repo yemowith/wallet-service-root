@@ -35,6 +35,9 @@ const container = {
     // Combine the random letter with the rest of the string
     return `${randomLetter}${randomString}`
   },
+  deleteMany: async () => {
+    return await dbClient.container.deleteMany()
+  },
 }
 const dbPrismaProvider = { container }
 

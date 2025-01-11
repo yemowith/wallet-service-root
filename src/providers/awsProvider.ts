@@ -28,6 +28,7 @@ import {
   EC2Client,
 } from '@aws-sdk/client-ec2'
 import { ecsClient, ec2Client } from '../core/clients/aws'
+import { logger } from '../core/helpers/helpers'
 const VPC_ID: any = null
 
 const getClusters = async () => {
@@ -69,10 +70,10 @@ const getClusterName = async () => {
       const clusterArn = response.clusterArns[0]
       const clusterName = clusterArn.split('/').pop() // Get the last part of the ARN
 
-      console.log('Cluster Name:', clusterName)
+      logger('Cluster Name:', clusterName)
       return clusterName
     } else {
-      console.log('No clusters found.')
+      logger('No clusters found.')
       return null
     }
   } catch (error) {
@@ -104,7 +105,7 @@ const getSubnets = async () => {
       const subnetIds = response.Subnets.map((subnet) => subnet.SubnetId)
       return subnetIds
     } else {
-      console.log('No subnets found.')
+      logger('No subnets found.')
       return []
     }
   } catch (error) {
@@ -121,7 +122,7 @@ const getSecurityGroups = async () => {
     const securityGroupIds = response.SecurityGroups.map((sg) => sg.GroupId)
     return securityGroupIds
   } else {
-    console.log('No security groups found.')
+    logger('No security groups found.')
     return []
   }
 }
@@ -133,7 +134,7 @@ const getContainerNameFromTaskDefinition = async (taskDefinition: string) => {
 
     if (response.taskDefinition?.containerDefinitions?.length) {
       const containerName = response.taskDefinition.containerDefinitions[0].name // Get the first container name
-      console.log('Container Name:', containerName)
+      logger('Container Name:', containerName)
       return containerName
     } else {
       console.error('No containers found in the task definition.')
@@ -173,7 +174,7 @@ const runNewTask = async (
   const params = {
     cluster: clusterName, // ECS cluster name
     taskDefinition: taskDefinition, // Task definition ARN or family:revision
-    count: 1, // Number of tasks to run
+    count: 10, // Number of tasks to run
     launchType: 'FARGATE', // Or "EC2" if using EC2 instances
     networkConfiguration: {
       awsvpcConfiguration: {
@@ -196,7 +197,7 @@ const runNewTask = async (
     // @ts-ignore
     const command = new RunTaskCommand(params)
     const response = await ecsClient.send(command)
-    console.log('Task started successfully:', response.tasks)
+    logger('Task started successfully:', response.tasks)
     return response
   } catch (error) {
     console.error('Error running task:', error)
@@ -226,7 +227,7 @@ const stopTask = async (clusterName: string, taskArn: string) => {
     })
 
     const response = await ecsClient.send(command)
-    console.log('Task stopped successfully:', response.task)
+    logger('Task stopped successfully:', response.task?.taskArn)
   } catch (error) {
     console.error('Error stopping task:', error)
   }
@@ -237,17 +238,17 @@ const stopAllTasks = async (clusterName: string) => {
   const taskArns = await listClusterTasks(clusterName)
 
   if (taskArns.length === 0) {
-    console.log('No tasks found in the cluster.')
+    logger('No tasks found in the cluster.')
     return
   }
 
-  console.log('Stopping tasks:', taskArns)
+  logger('Stopping tasks:', taskArns)
 
   for (const taskArn of taskArns) {
     await stopTask(clusterName, taskArn)
   }
 
-  console.log('All tasks stopped.')
+  logger('All tasks stopped.')
 }
 
 const createCluster = async (
@@ -270,7 +271,7 @@ const createCluster = async (
     const command = new CreateClusterCommand(params)
     const response = await ecsClient.send(command)
 
-    console.log('Cluster created successfully:', response.cluster?.clusterArn)
+    logger('Cluster created successfully:', response.cluster?.clusterArn)
     return response.cluster
   } catch (error) {
     console.error('Error creating cluster:', error)
@@ -281,17 +282,17 @@ const createCluster = async (
 const deleteCluster = async (clusterName: string) => {
   try {
     // Stop all running tasks
-    console.log(`Stopping all tasks in cluster: ${clusterName}`)
+    logger(`Stopping all tasks in cluster: ${clusterName}`)
     await stopAllTasks(clusterName)
 
     // Delete the cluster
-    console.log(`Deleting cluster: ${clusterName}`)
+    logger(`Deleting cluster: ${clusterName}`)
     const command = new DeleteClusterCommand({
       cluster: clusterName,
     })
 
     const response = await ecsClient.send(command)
-    console.log('Cluster deleted successfully:', response.cluster?.clusterArn)
+    logger('Cluster deleted successfully:', response.cluster?.clusterArn)
 
     return response.cluster
   } catch (error) {
@@ -326,16 +327,21 @@ const createTaskDefinition = async (
     requiresCompatibilities: [Compatibility.FARGATE], // Launch type compatibility
     executionRoleArn: executionRoleArn,
     cpu: '1024', // Task-level CPU (e.g., 256, 512, 1024 for Fargate)
-    memory: '1024', // Task-level memory (e.g., 512, 1024 for Fargate)
+    memory: '2048', // Task-level memory (e.g., 512, 1024 for Fargate)
     containerDefinitions: [
       {
         name: container, // Name of the container
         image: image, // Docker image to use
         cpu: 1, // Container-specific CPU allocation
-        memory: 2048, // Container-specific memory allocation
+        memory: 512, // Container-specific memory allocation
         portMappings: [
           {
             containerPort: 3000, // Port inside the container
+            hostPort: 3000, // Port on the host
+            protocol: TransportProtocol.TCP, // Protocol (tcp or udp)
+          },
+          {
+            containerPort: 80, // Port inside the container
             hostPort: 80, // Port on the host
             protocol: TransportProtocol.TCP, // Protocol (tcp or udp)
           },
@@ -344,7 +350,7 @@ const createTaskDefinition = async (
         logConfiguration: {
           logDriver: LogDriver.AWSLOGS, // Use the AWS CloudWatch Logs driver
           options: {
-            'awslogs-group': `/ecs/${family}`,
+            'awslogs-group': `/ecs/wallet-container-service`,
             'awslogs-region': awsRegion,
             'awslogs-stream-prefix': 'ecs',
           },
@@ -358,7 +364,7 @@ const createTaskDefinition = async (
     const command = new RegisterTaskDefinitionCommand(params)
     const response = await ecsClient.send(command)
 
-    console.log(
+    logger(
       'Task Definition created successfully:',
       response.taskDefinition?.taskDefinitionArn,
     )
@@ -377,7 +383,7 @@ const deleteTaskDefinition = async (taskDefinitionArn: string) => {
 
     const response = await ecsClient.send(command)
 
-    console.log(
+    logger(
       'Task Definition deregistered successfully:',
       response.taskDefinition?.taskDefinitionArn,
     )
@@ -388,7 +394,7 @@ const deleteTaskDefinition = async (taskDefinitionArn: string) => {
   }
 }
 
-const aws = {
+const awsProvider = {
   getClusters,
   listTaskDefinitions,
   listContainerInstances,
@@ -408,4 +414,4 @@ const aws = {
   deleteTaskDefinition,
 }
 
-export default aws
+export default awsProvider

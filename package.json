@@ -7,8 +7,13 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "dev": "nodemon src/index.ts",
+    "start:dev": "npx kill-port 3000 && nodemon -e ts,js --exec ts-node -r tsconfig-paths/register src/index.ts",
     "tester": "nodemon -e ts,js --exec ts-node -r tsconfig-paths/register src/test.ts",
-    "task": "ts-node src/tasks/taskrunner.ts"
+    "task:create-container": "ts-node src/tasks/taskrunner.ts create-container",
+    "task:reset-all-containers": "ts-node src/tasks/taskrunner.ts reset-all-containers",
+    "task:get-container": "ts-node src/tasks/taskrunner.ts get-container",
+    "task:create-cluster": "ts-node src/tasks/taskrunner.ts create-cluster",
+    "task:reset-all-clusters": "ts-node src/tasks/taskrunner.ts reset-all-clusters"
   },
   "dependencies": {
     "@aws-sdk/client-ec2": "^3.723.0",

@@ -1,4 +1,5 @@
 import redisClient from '../core/clients/redis'
+import enums from '../core/helpers/enums'
 import MNemonic from '../core/libs/MNemonic'
 import {
   ContainerRowData,
@@ -29,6 +30,9 @@ const redisProvider = {
 
     const rowInstance = (data: ContainerRowData): RowInstanceType => {
       let containerId = data.containerId
+      if (!containerId) {
+        throw new Error('Container ID is required')
+      }
       return {
         getId: () => {
           return containerId
@@ -45,28 +49,28 @@ const redisProvider = {
         setStatus: async (status: string) => {
           data.status = status
           await redisClient.set(
-            `container:${containerId}`,
+            enums.setContainerRedisKey(containerId),
             JSON.stringify(data),
           )
         },
         setAsStarted: async () => {
           data.isStarted = true
           await redisClient.set(
-            `container:${containerId}`,
+            enums.setContainerRedisKey(containerId),
             JSON.stringify(data),
           )
         },
         setAsDone: async () => {
           data.isDone = true
           await redisClient.set(
-            `container:${containerId}`,
+            enums.setContainerRedisKey(containerId),
             JSON.stringify(data),
           )
         },
         addData: async (key: string, value: any) => {
           data[key] = value
           await redisClient.set(
-            `container:${containerId}`,
+            enums.setContainerRedisKey(containerId),
             JSON.stringify(data),
           )
         },
@@ -78,7 +82,7 @@ const redisProvider = {
         },
         save: async () => {
           await redisClient.set(
-            `container:${containerId}`,
+            enums.setContainerRedisKey(containerId),
             JSON.stringify(data),
           )
         },
@@ -92,14 +96,18 @@ const redisProvider = {
     }
 
     const isContainerExists = async (containerId: string) => {
-      const containerData = await redisClient.get(`container:${containerId}`)
+      const containerData = await redisClient.get(
+        enums.setContainerRedisKey(containerId),
+      )
       return containerData ? true : false
     }
 
     const get = async (
       containerId: string,
     ): Promise<RowInstanceType | null> => {
-      const containerData = await redisClient.get(`container:${containerId}`)
+      const containerData = await redisClient.get(
+        enums.setContainerRedisKey(containerId),
+      )
       return containerData ? rowInstance(JSON.parse(containerData)) : null
     }
 
@@ -136,14 +144,20 @@ const redisProvider = {
         )
         return false
       }
-      await redisClient.del(`container:${containerId}`)
+      await redisClient.del(enums.setContainerRedisKey(containerId))
       console.log(`Container ${containerId} deleted successfully.`)
       return true
     }
+
+    const deleteAll = async () => {
+      await redisClient.del('container:*')
+    }
+
     return {
       isExists: isContainerExists,
       createRowInstance,
       rowInstance,
+      deleteAll,
       get,
       register,
       deleteRow,

@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+  # Execution Layer: Geth
+  geth:
+    image: ethereum/client-go:stable
+    container_name: geth
+    restart: unless-stopped
+    ports:
+      - "8545:8545" # HTTP-RPC API
+      - "8546:8546" # WebSocket API
+      - "30303:30303" # P2P Network (TCP)
+      - "30303:30303/udp" # P2P Network (UDP)
+      - "8551:8551" # Engine API
+    volumes:
+      - ./geth-data:/root/.ethereum # Persist Geth data
+      - ./jwtsecret:/jwtsecret # JWT secret for authentication
+    user: "${UID}:${GID}"
+    command: [
+        "--http", # Enable HTTP-RPC API
+        "--http.addr=0.0.0.0", # Bind HTTP-RPC to all interfaces
+        "--http.api=eth,net,web3", # Enable JSON-RPC APIs
+        "--http.corsdomain=*", # Allow CORS requests
+        "--http.vhosts=*", # Allow all virtual hosts
+        "--ws", # Enable WebSocket-RPC API
+        "--ws.addr=0.0.0.0", # Bind WebSocket API to all interfaces
+        "--ws.api=eth,net,web3", # Enable WebSocket APIs
+        "--syncmode=full", # Snap sync mode for faster syncing
+        "--authrpc.port=8551", # Enable Engine API for consensus clients
+        "--authrpc.jwtsecret=/jwtsecret/jwt.hex", # Path to JWT secret
+        "--authrpc.addr=0.0.0.0", # Bind Engine API to all interfaces
+        "--authrpc.vhosts=*", # Allow all virtual hosts
+        "--cache=2048", # Allocate memory for caching
+        "--maxpeers=50", # Max number of allowed peers
+        "--verbosity=4",
+      ]
+
+  # Consensus Layer: Nimbus
+  nimbus-beacon:
+    image: statusim/nimbus-eth2:multiarch-latest
+    container_name: nimbus-beacon
+    restart: unless-stopped
+    ports:
+      - "5052:5052" # Beacon API HTTP
+      - "9000:9000/tcp" # P2P Network (TCP)
+      - "9000:9000/udp" # P2P Network (UDP)
+    volumes:
+      - ./nimbus-data:/root/.nimbus # Persist Nimbus data
+      - ./jwtsecret:/jwtsecret # Share JWT secret with Geth
+    user: "${UID}:${GID}" # Docker konteynerini yerel kullanıcı kimlikleriyle çalıştır
+    command: [
+        "--network=mainnet", # Mainnet configuration
+        "--web3-url=http://geth:8551", # Connect to Geth's Engine API
+        "--jwt-secret=/jwtsecret/jwt.hex", # Path to JWT secret
+        "--data-dir=/root/.nimbus", # Data directory for Nimbus
+        "--tcp-port=9000", # TCP port for P2P
+        "--udp-port=9000", # UDP port for P2P
+        "--rest-port=5052", # REST API port
+      ]
+    depends_on:
+      - geth
